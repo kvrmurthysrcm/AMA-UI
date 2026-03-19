@@ -1,0 +1,134 @@
+<div class="shell">
+  <header class="hero-card">
+    <div>
+      <p class="eyebrow">AMA Analytics Assistant</p>
+      <h1>Ask your marketplace data in plain English</h1>
+      <p class="subcopy">
+        Search sales, products, trends, inventory and performance using the Agent Service.
+      </p>
+    </div>
+    <div class="hero-pill">Angular · ApexCharts · Agent on 8083</div>
+  </header>
+
+  <section class="search-card">
+    <div class="search-row">
+      <input
+        type="text"
+        class="search-input"
+        [ngModel]="query()"
+        (ngModelChange)="query.set($event)"
+        placeholder="Show me the top products in the last 30 days"
+        (keyup.enter)="runSearch()"
+      />
+      <button class="search-button" (click)="runSearch()" [disabled]="loading()">Search</button>
+    </div>
+
+    <div class="chips-row">
+      <button class="chip" *ngFor="let chip of chips" (click)="applyChip(chip)">{{ chip.label }}</button>
+    </div>
+  </section>
+
+  <section class="state-card" *ngIf="loading()">
+    <div class="skeleton shimmer"></div>
+    <div class="skeleton shimmer medium"></div>
+    <div class="skeleton shimmer short"></div>
+  </section>
+
+  <section class="state-card error" *ngIf="!loading() && error()">
+    <h3>Unable to load results</h3>
+    <p>{{ error() }}</p>
+  </section>
+
+  <ng-container *ngIf="!loading() && hasResponse() && response() as result">
+    <section class="summary-grid">
+      <article class="summary-card">
+        <div class="summary-header">
+          <span class="tag primary">{{ result.selectedTool }}</span>
+          <span class="tag">{{ result.chartType }}</span>
+        </div>
+        <h2>Summary</h2>
+        <p class="summary-text">{{ result.summary }}</p>
+      </article>
+
+      <article class="meta-card">
+        <h3>Execution details</h3>
+        <ul>
+          <li><span>Tool</span><strong>{{ result.data.toolName || result.selectedTool }}</strong></li>
+          <li><span>Endpoint</span><strong>{{ result.data.endpointPath || '—' }}</strong></li>
+          <li><span>Status</span><strong>{{ result.data.statusCode || '—' }}</strong></li>
+          <li><span>Rows shown</span><strong>{{ tableRows().length }}</strong></li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="results-card">
+      <div class="results-header">
+        <div>
+          <p class="eyebrow">Visualization</p>
+          <h2>{{ chartTitle() }}</h2>
+        </div>
+        <div class="view-toggle">
+          <button [class.active]="activeView() === 'chart'" (click)="setView('chart')">Chart</button>
+          <button [class.active]="activeView() === 'table'" (click)="setView('table')">Table</button>
+        </div>
+      </div>
+
+      <div class="chart-wrap" *ngIf="activeView() === 'chart'">
+        <ng-container *ngIf="barLineOptions() as options; else pieOrFallback">
+          <apx-chart
+            [series]="options.series"
+            [chart]="options.chart"
+            [xaxis]="options.xaxis"
+            [yaxis]="options.yaxis"
+            [dataLabels]="options.dataLabels"
+            [stroke]="options.stroke"
+            [tooltip]="options.tooltip"
+            [plotOptions]="options.plotOptions"
+            [fill]="options.fill"
+            [markers]="options.markers"
+            [legend]="options.legend"
+            [colors]="options.colors">
+          </apx-chart>
+        </ng-container>
+        <ng-template #pieOrFallback>
+          <ng-container *ngIf="pieOptions() as pie; else fallbackTableHint">
+            <apx-chart
+              [series]="pie.series"
+              [chart]="pie.chart"
+              [labels]="pie.labels"
+              [legend]="pie.legend"
+              [tooltip]="pie.tooltip"
+              [responsive]="pie.responsive"
+              [colors]="pie.colors">
+            </apx-chart>
+          </ng-container>
+        </ng-template>
+        <ng-template #fallbackTableHint>
+          <div class="empty-card">
+            <h3>No chart available</h3>
+            <p>This response is better represented as a table.</p>
+          </div>
+        </ng-template>
+      </div>
+
+      <div class="table-wrap" *ngIf="activeView() === 'table'">
+        <div class="empty-card" *ngIf="!hasRows()">
+          <h3>No data returned</h3>
+          <p>The Agent responded successfully, but there are no rows to display.</p>
+        </div>
+        <table *ngIf="hasRows()">
+          <thead>
+            <tr>
+              <th *ngFor="let col of tableColumns()">{{ col }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of tableRows(); trackBy: trackByIndex">
+              <td *ngFor="let col of tableColumns()">{{ formatCell(row[col]) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </ng-container>
+</div>
